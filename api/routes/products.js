@@ -1,46 +1,44 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
+const multer = require('multer');
+const checkAuth = require('../middleware/check-auth');
+const ProductsController = require('../controllers/products');
 
-router.get('/', (req, res, next) => {
-    res.status(200).json({
-        message: 'Handling get request to /products'
-    })
-});0
-
-router.post('/', (req, res, next) => {
-    const product = {
-        name: req.body.name,
-        price: req.body.price
-    }
-    res.status(201).json({
-        message: 'Handling post request to /products',
-        createdProduct: product
-    })
+const storage = multer.diskStorage({
+  destination: function(req, file, cb) {
+    cb(null, './uploads/');
+  },
+  filename: function(req, file, cb) {
+    const now = new Date().toISOString();
+    const date = now.replace(/:/g, '-');
+    cb(null, date + file.originalname);
+  }
+});
+const fileFilter = function(req, file, cb) {
+  //reject a file
+  if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
+    cb(null, true);
+  } else {
+    cb(null,false);
+  }
+}
+const upload = multer({
+  storage, 
+  limits: {
+  filesize: 1024*1024*5
+  },
+  fileFilter
 });
 
-router.get('/:productId', (req, res, next) => {
-    const id = req.params.productId;
-    if (id === 'special') {
-        res.status(200).json({
-            message: 'You discovered the special ID',
-            id
-        });
-    } else {
-        res.status(200).json({
-            message: 'You passed an ID'
-        })
-    }
-});
 
-router.patch('/:productId', (req, res, next) => {
-    res.status(200).json({
-        message: 'Updated product!'
-    });
-});
-router.delete('/:productId', (req, res, next) => {
-    res.status(200).json({
-        message: 'Deleted product!'
-    });
-});
+router.get("/", ProductsController.products_get_all);
+
+router.post("/", checkAuth, upload.single('productImage'), ProductsController.products_create_product);
+
+router.get("/:productId", ProductsController.products_get_product);
+
+router.patch("/:productId", checkAuth, ProductsController.products_update_product);
+
+router.delete("/:productId", checkAuth, ProductsController.products_delete_product);
 
 module.exports = router;
